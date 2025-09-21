@@ -3,10 +3,10 @@
 require('dotenv').config();
 
 const { Command } = require('commander');
-const GitHubClient = require('./githubClient');
-const { transformRepos } = require('./transformer');
-const Enricher = require('./enricher');
-const OutputHandler = require('./outputHandler');
+const GitHubClient = require('./controllers/githubClient');
+const { transformRepos } = require('./models/transformer');
+const Enricher = require('./controllers/enricher');
+const OutputHandler = require('./views/outputHandler');
 
 const program = new Command();
 
@@ -16,39 +16,36 @@ program
   .version('1.0.0');
 
 program
-  .argument('<username>', 'GitHub username to fetch repositories for')
-  .option('-o, --output <type>', 'output type: console or file', 'console')
-  .option('-f, --file <filename>', 'output filename (required if output is file)')
   .option('-t, --token <token>', 'GitHub personal access token (can also use GITHUB_TOKEN env var)')
-  .action(async (username, options) => {
+  .action(async (options) => {
     try {
+      // Get username from env
+      const username = process.env.USER;
+      if (!username) {
+        throw new Error('USER environment variable is required.');
+      }
+
       // Get token from option or env
       const token = options.token || process.env.GITHUB_TOKEN;
       if (!token) {
         throw new Error('GitHub token is required. Provide via --token option or GITHUB_TOKEN environment variable.');
       }
 
-      console.log(`Fetching repositories for user: ${username}`);
-
       // Initialize components
       const githubClient = new GitHubClient(token);
       const enricher = new Enricher(githubClient);
 
       // Fetch raw repositories
-      const rawRepos = await githubClient.fetchUserRepos(username);
-      console.log(`Fetched ${rawRepos.length} repositories`);
+      const rawRepos = await githubClient.fetchUserRepos();
 
       // Transform repositories
       const transformedRepos = transformRepos(rawRepos);
-      console.log('Transformed repositories');
 
       // Enrich repositories
       const enrichedRepos = await enricher.enrichRepos(transformedRepos);
-      console.log('Enriched repositories with additional data');
 
       // Output results
-      await OutputHandler.output(enrichedRepos, options);
-      console.log('Portfolio data generated successfully');
+      await OutputHandler.output(enrichedRepos);
 
     } catch (error) {
       console.error(`Error: ${error.message}`);

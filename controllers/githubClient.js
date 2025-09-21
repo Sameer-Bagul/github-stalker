@@ -29,24 +29,33 @@ class GitHubClient {
   }
 
   /**
-   * Fetches repositories for a given user.
-   * @param {string} username - The GitHub username.
+   * Fetches repositories for the authenticated user.
    * @returns {Promise<Array>} List of user repositories.
    */
-  async fetchUserRepos(username) {
+  async fetchUserRepos() {
     try {
-      const rateLimit = await this.checkRateLimit();
-      if (rateLimit.resources.core.remaining === 0) {
-        throw new Error('Rate limit exceeded. Please try again later.');
+      const allRepos = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const rateLimit = await this.checkRateLimit();
+        if (rateLimit.resources.core.remaining === 0) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        }
+
+        const response = await this.octokit.repos.listForAuthenticatedUser({
+          type: 'owner',
+          sort: 'updated',
+          per_page: 100,
+          page
+        });
+        allRepos.push(...response.data);
+        hasMore = response.data.length === 100;
+        page++;
       }
 
-      const response = await this.octokit.repos.listForUser({
-        username,
-        type: 'owner',
-        sort: 'updated',
-        per_page: 100
-      });
-      return response.data;
+      return allRepos;
     } catch (error) {
       throw new Error(`Failed to fetch user repositories: ${error.message}`);
     }

@@ -27,44 +27,31 @@ class Enricher {
       throw new Error('Invalid repository object provided');
     }
 
-    console.log(`Enriching repo: ${repo.full_name}`);
-
     try {
       const enriched = { ...repo };
 
       // Fetch languages
-      console.log(`Fetching languages for ${repo.full_name}`);
       const languages = await this._fetchLanguages(repo);
       enriched.languages = languages;
-      console.log(`Languages fetched for ${repo.full_name}: ${JSON.stringify(languages)}`);
 
       // Fetch README for long_description
-      console.log(`Fetching README for ${repo.full_name}`);
       const readme = await this._fetchReadme(repo);
       enriched.long_description = readme;
-      console.log(`README fetched for ${repo.full_name}: ${readme ? 'Found' : 'Not found'}`);
 
       // Derive tech_stack from languages and topics
       enriched.tech_stack = this._deriveTechStack(languages, repo.topics);
-      console.log(`Tech stack derived for ${repo.full_name}`);
 
       // Derive tags from topics
       enriched.tags = this._deriveTags(repo.topics);
-      console.log(`Tags derived for ${repo.full_name}`);
 
       // Enrich media
-      console.log(`Enriching media for ${repo.full_name}`);
       enriched.media = await this._enrichMedia(repo);
-      console.log(`Media enriched for ${repo.full_name}`);
 
       // Set portfolio_flags
       enriched.portfolio_flags = this._setPortfolioFlags(repo);
-      console.log(`Portfolio flags set for ${repo.full_name}`);
 
-      console.log(`Enrichment completed for ${repo.full_name}`);
       return enriched;
     } catch (error) {
-      console.warn(`Failed to enrich repo ${repo.full_name}: ${error.message}`);
       // Return original repo with minimal enrichment on error
       return {
         ...repo,
@@ -107,7 +94,6 @@ class Enricher {
       const [owner, name] = repo.full_name.split('/');
       return await this.githubClient.fetchRepoLanguages(owner, name);
     } catch (error) {
-      console.warn(`Failed to fetch languages for ${repo.full_name}: ${error.message}`);
       return null;
     }
   }
@@ -123,7 +109,6 @@ class Enricher {
       const [owner, name] = repo.full_name.split('/');
       return await this.githubClient.fetchReadme(owner, name);
     } catch (error) {
-      console.warn(`Failed to fetch README for ${repo.full_name}: ${error.message}`);
       return null;
     }
   }
@@ -231,7 +216,7 @@ class Enricher {
       const screenshots = await this._fetchScreenshots(owner, name);
       media.screenshots = screenshots;
     } catch (error) {
-      console.warn(`Failed to fetch media for ${repo.full_name}: ${error.message}`);
+      // Ignore media fetch errors
     }
 
     return media;
@@ -258,9 +243,7 @@ class Enricher {
           .map(file => file.download_url);
       }
     } catch (error) {
-      if (error.status !== 404) {
-        throw error;
-      }
+      // Skip gracefully without logging API errors
     }
     return [];
   }
