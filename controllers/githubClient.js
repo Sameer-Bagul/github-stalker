@@ -12,7 +12,7 @@ class GitHubClient {
     if (!token) {
       throw new Error('GitHub token is required');
     }
-    this.octokit = new Octokit({ auth: token });
+    this.octokit = new Octokit({ auth: token, log: { level: 'info' } });
   }
 
   /**
