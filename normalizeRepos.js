@@ -52,6 +52,26 @@ async function ensureProjectStructure(owner, repo) {
       console.log(`✅ Added .project-meta.json in ${repo}`);
     }
   }
+
+  // --- README.md ---
+  try {
+    await octokit.repos.getContent({
+      owner,
+      repo,
+      path: "README.md"
+    });
+  } catch (err) {
+    if (err.status === 404) {
+      await octokit.repos.createOrUpdateFileContents({
+        owner,
+        repo,
+        path: "README.md",
+        message: "chore: add basic README",
+        content: Buffer.from("# Read me").toString("base64"),
+      });
+      console.log(`✅ Created README.md in ${repo}`);
+    }
+  }
 }
 
 async function run() {
